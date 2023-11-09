@@ -1,7 +1,6 @@
 
 import random
-
-# These are dice configs from pre-2008 version of game
+import numpy as np
 
 classic_dice = True
 
@@ -21,7 +20,6 @@ die12 = ['E', 'Z', 'A', 'V', 'N', 'D'] if classic_dice else ['E', 'I', 'O', 'S',
 die13 = ['R', 'A', 'L', 'E', 'S', 'C'] if classic_dice else ['E', 'L', 'R', 'T', 'T', 'Y']
 die14 = ['U', 'W', 'I', 'L', 'R', 'G'] if classic_dice else ['H', 'I', 'M', 'N', 'U', 'Qu']
 die15 = ['P', 'A', 'C', 'E', 'M', 'D'] if classic_dice else ['H', 'L', 'N', 'N', 'R', 'Z']
-
 dice = [die0, die1, die2, die3, die4, die5, die6, die7, die8, die9, die10, die11, die12, die13, die14, die15]
 
 random.shuffle(dice)  # puts the dice in random order
@@ -31,21 +29,31 @@ board = [  # picks a random letter from each die
     [random.choice(dice[4]), random.choice(dice[5]), random.choice(dice[6]), random.choice(dice[7])],
     [random.choice(dice[8]), random.choice(dice[9]), random.choice(dice[10]), random.choice(dice[11])],
     [random.choice(dice[12]), random.choice(dice[13]), random.choice(dice[14]), random.choice(dice[15])]]
-
-vectors = [(0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]
-words = []
-
-def find_words(start_die, current_word, max_length):
-    for vector in vectors:
-            if 0 <= start_die[0] + vector[0] <= 3 and 0 <= start_die[1] + vector[1] <= 3:  # checks if sq is on board
-                current_word = board[start_die[0]][start_die[1]] + board[start_die[0] + vector[0]][start_die[1] + vector[1]]
-                words.append(current_word)
-                if len(current_word) <= max_length:
-                    find_words((start_die[0] + vector[0], start_die[1] + vector[1]), current_word, max_length)
-
-                            
 for row in board:
         print(row[0], row[1], row[2], row[3])
 
-find_words((0, 0), False, 1)
+vectors = [np.array([0, 1]), np.array([1, 1]), np.array([1, 0]), np.array([1, -1]), np.array([0, -1]), np.array([-1, -1]), np.array([-1, 0]), np.array([-1, 1])]
+words = []
+vector_log = []  # tracks the word path to exclude repetitions
+
+def find_words(current_die, current_word, min_length, max_length):  # recursive implementation running thru all of the possible letter combinations to a defined max length
+    for vector in vectors:  # iterates thru the vectors, looking at next die along
+        next_die = (current_die[0] + vector[0], current_die[1] + vector[1])
+
+        if 0 <= next_die[0] <= 3 and 0 <= next_die[1] <= 3:  # if die is on board
+            if len(vector_log) < 2 or not (np.array_equal(vector, vector_log[-1] * -1) and np.array_equal(vector, vector_log[-2])):  # first checks if word is too short to be repeating, if not then makes sure there is no repetition
+
+                vector_log.append(vector)
+
+                word = current_word + board[next_die[0]][next_die[1]]  # adds new letter to existing string, then adds this to word array
+                if sum(1 for c in word if c.isupper()) >= min_length:  # checks word is above minimum length. Counting upper case letters to deal with 'Qu's
+                    words.append(word)
+                if sum(1 for c in word if c.isupper()) <= max_length:  # if the word is within max length limits, run the recursion setting most recent die examined as current_die.
+                    find_words(next_die, word, min_length, max_length)
+
+                del vector_log[-1]  # removes the last vector - works handily with the recursion when stepping back down in word size - cuts off each node when done with branching
+
+find_words(current_die=(0,0), current_word=board[0][0], min_length=3, max_length=4)
+print(len(words))
 print(words)
+
